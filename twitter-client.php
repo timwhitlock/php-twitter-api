@@ -202,7 +202,7 @@ class TwitterApiClient {
         }
         // @todo could validate args against endpoints here.
         
-        // Using Wordpress WP_Http for requests, see class-http.php
+        // prepare HTTP request config
         $conf = array (
             'method' => $http_method,
         );
