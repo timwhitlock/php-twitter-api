@@ -64,8 +64,8 @@ function proxy_exit( $body, $type, $status = 200, $ttl = 0 ){
     if( 200 === $status ){
         if( $ttl ){
             $exp = gmdate('D, d M Y H:i:s', $ttl + time() ).' GMT';
-            header('Pragma: ', true );
-            header('Cache-Control: private, max-age='.$ttl, true );
+            header('Pragma: cache', true );
+            header('Cache-Control: public, max-age='.$ttl, true );
             header('Expires: '.$exp, true );
         }
     }
