@@ -316,11 +316,11 @@ class TwitterApiClient {
         $http = self::http_request( $endpoint, $conf );        
         // remember current rate limits for this endpoint
         $this->last_call = $path;
-        if( isset($http['headers']['X-Rate-Limit-Limit']) ) {
+        if( isset($http['headers']['x-rate-limit-limit']) ) {
             $this->last_rate[$path] = array (
-                'limit'     => (int) $http['headers']['X-Rate-Limit-Limit'],
-                'remaining' => (int) $http['headers']['X-Rate-Limit-Remaining'],
-                'reset'     => (int) $http['headers']['X-Rate-Limit-Reset'],
+                'limit'     => (int) $http['headers']['x-rate-limit-limit'],
+                'remaining' => (int) $http['headers']['x-rate-limit-remaining'],
+                'reset'     => (int) $http['headers']['x-rate-limit-reset'],
             );
         }
         return $http;
@@ -371,9 +371,9 @@ class TwitterApiClient {
         curl_close($ch);
         $headers = array();
         list( $header, $body ) = preg_split('/\r\n\r\n/', $response, 2 ); 
-        if( preg_match_all('/^(X-Rate[^:]+):\s*(.+)/m', $header, $r, PREG_SET_ORDER ) ){
+        if( preg_match_all('/^(Content[\w\-]+|X-Rate[^:]+):\s*(.+)/mi', $header, $r, PREG_SET_ORDER ) ){
             foreach( $r as $match ){
-                $headers[ $match[1] ] = $match[2];
+                $headers[ strtolower($match[1]) ] = $match[2];
             }        
         }
         

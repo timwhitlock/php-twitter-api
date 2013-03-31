@@ -29,17 +29,14 @@ function proxy_user_request( $path, $ttl = 60 ){
     // execute raw api call with no caching
     $http = $Client->raw( $path, $args, $method );
     extract( $http );
+    $type = $headers['content-type'];
 
-    if( $body && '{' === $body{0} ){
-        if( isset($callback) ){
-            $type = 'text/javascript; charset=utf-8';
-            $body = $callback.'('.$body.');';
-        }
-        else {
-            $type = 'application/json; charset=utf-8';
-        }
+    // wrap JSONP callback function as long as response is JSON
+    if( isset($callback) && 0 === strpos( $type, 'application/json' ) ){
+        $type = 'text/javascript; charset=utf-8';
+        $body = $callback.'('.$body.');';
     }
-    
+
     if( 200 === $status ){
         if( $ttl ){
             $exp = gmdate('D, d M Y H:i:s', $ttl + time() ).' GMT';
