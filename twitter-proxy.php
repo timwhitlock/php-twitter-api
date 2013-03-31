@@ -6,11 +6,10 @@
  * @return void
  */
 function proxy_user_request( $path, $ttl = 60 ){
-
     try {
         
         // default content type in case of failure
-        $type = 'application/json; charset=utf-8';
+        $type = TW_CONTENT_TYPE;
 
         // Authenticate Twitter client from creds in config.php
         $Client = new TwitterApiClient;
@@ -25,41 +24,43 @@ function proxy_user_request( $path, $ttl = 60 ){
             $args = $_GET;
         }
         
-        // Lock screen_name and user_id params if specified in config
-        // This is a security measure to stop other people using your proxy
-        //
-        if( TW_LOCK_USER_NAME && isset($args['screen_name']) && strcasecmp(TW_LOCK_USER_NAME, $args['screen_name']) ){
-            throw new Exception( 'Proxy locked to screen_name '.TW_LOCK_USER_NAME, 403 );
-        }
-        if( TW_LOCK_USER_ID && isset($args['user_id']) && TW_LOCK_USER_ID !== $args['user_id'] ){
-            throw new Exception( 'Proxy locked to user_id '.TW_LOCK_USER_ID, 403 );
-        }
-        
-        // JSONP callback may be in request
-        if( ! empty($_REQUEST['callback']) ){
-            $callback = $_REQUEST['callback'];
-            unset( $args['callback'] );
-        }
+        // Twitter doesn't complain about unecessary parameters, but may as well clean up one's specific to us
+        // This might help with caching too.
+        unset( $args['callback'] );
         
         // execute raw api call with no caching
         $http = $Client->raw( $path, $args, $method );
         extract( $http );
         $type = $headers['content-type'];
+        
+        proxy_exit( $body, $type, $status, $ttl );
 
     }
     catch( Exception $Ex ){
-        $status = $Ex->getCode();
-        $error  = array( 'message' => $Ex->getMessage() );
-        $body   = json_encode( array('errors' => array($error) ) );
+        proxy_die( 500, $Ex->getMessage() );
     }
+    
+}
 
+
+
+/**
+ * Respond with proxied data and exit
+ * @internal
+ */
+function proxy_exit( $body, $type, $status = 200, $ttl = 0 ){
+    
+    // currently only supporting json
+    // @todo support XML formats
+    $isJSON = 0 === strpos( $type, 'application/json' );
     
     // wrap JSONP callback function as long as response is JSON
-    if( isset($callback) && 0 === strpos( $type, 'application/json' ) ){
+    if( ! empty($_REQUEST['callback']) && $isJSON ){
         $type = 'text/javascript; charset=utf-8';
         $body = $callback.'('.$body.');';
     }
-
+    
+    // handle HTTP status and expiry header
     if( 200 === $status ){
         if( $ttl ){
             $exp = gmdate('D, d M Y H:i:s', $ttl + time() ).' GMT';
@@ -69,14 +70,50 @@ function proxy_user_request( $path, $ttl = 60 ){
         }
     }
     else {
-        header('HTTP/1.0 '.$status.' '._twitter_api_http_status_text($status), true, $status );
+        header('HTTP/1.1 '.$status.' '._twitter_api_http_status_text($status), true, $status );
     }
-    
     
     header('Content-Type: '.$type, true );
     header('Content-Length: '.strlen($body), true );
-
     echo $body;
-    exit(0);
-    
+    exit(0);    
 }
+
+
+
+
+/**
+ * Fatal exit for proxy in similar format to Twitter API
+ * @internal
+ */
+function proxy_die( $status, $message = '' ){
+    if( ! $message ){
+        $message = _twitter_api_http_status_text( $status );
+    }
+    $errors[]= array (
+        'code'    => -1, 
+        'message' => $message,
+    );
+    $body = json_encode( compact('errors') );
+    proxy_exit( $body, TW_CONTENT_TYPE, $status );
+}
+
+
+
+
+/**
+ * Check user_id and screen_name params for security purposes
+ */
+function proxy_user_restrict( array $args ){
+    if( TW_LOCK_USER_NAME && isset($args['screen_name']) && strcasecmp(TW_LOCK_USER_NAME, $args['screen_name']) ){
+        proxy_die( 403, 'Proxy locked to screen_name '.TW_LOCK_USER_NAME );
+    }
+    if( TW_LOCK_USER_ID && isset($args['user_id']) && TW_LOCK_USER_ID !== $args['user_id'] ){
+        proxy_die( 403, 'Proxy locked to user_id '.TW_LOCK_USER_ID );
+    }
+    return true;
+}
+
+
+
+
