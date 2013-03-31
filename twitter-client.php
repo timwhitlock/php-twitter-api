@@ -157,18 +157,11 @@ class TwitterApiClient {
     
     
     /**
-     * Call API method over HTTP and return raw data
-     * @param string API method, e.g. "users/show"
-     * @param array method arguments
-     * @param string http request method
-     * @return array unserialized data returned from twitter
-     * @throws TwitterApiException
-     */
-    public function call( $path, array $_args = array(), $http_method = 'GET' ){
-        // all calls must be authenticated in API 1.1
-        if( ! $this->has_auth() ){
-            throw new TwitterApiException( 'Twitter client not authenticated', 0, 401 );
-        }
+     * Basic sanitation of api request arguments
+     * @param array original params passed by client code
+     * @return array sanitized params that we'll serialize
+     */    
+    private function sanitize_args( array $_args ){
         // transform some arguments and ensure strings
         // no further validation is performed
         $args = array();
@@ -183,12 +176,27 @@ class TwitterApiClient {
                  $args[$key] = 'false';
             }
             else if( ! is_scalar($val) ){
-                throw new TwitterApiException( 'Invalid Twitter parameter ('.gettype($val).') '.$key.' in '.$path, -1 );
+                throw new TwitterApiException( 'Invalid Twitter parameter ('.gettype($val).') '.$key, -1 );
             }
             else {
                 $args[$key] = (string) $val;
             }
         }
+        return $args;
+    }    
+    
+    
+    
+    /**
+     * Call API method over HTTP and return serialized data
+     * @param string API method, e.g. "users/show"
+     * @param array method arguments
+     * @param string http request method
+     * @return array unserialized data returned from Twitter
+     * @throws TwitterApiException
+     */
+    public function call( $path, array $args = array(), $http_method = 'GET' ){
+        $args = $this->sanitize_args( $args );
         // Fetch response from cache if possible / allowed / enabled
         if( $http_method === 'GET' && isset($this->cache_ttl) ){
            $cachekey = $this->cache_ns.$path.'_'.md5( serialize($args) );
@@ -200,28 +208,10 @@ class TwitterApiClient {
                return $data;
            }
         }
-        // @todo could validate args against endpoints here.
-        
-        // prepare HTTP request config
-        $conf = array (
-            'method' => $http_method,
-        );
-        // build signed URL and request parameters
-        $endpoint = TWITTER_API_BASE.'/'.$path.'.json';
-        $params = new TwitterOAuthParams( $args );
-        $params->set_consumer( $this->Consumer );
-        $params->set_token( $this->AccessToken );
-        $params->sign_hmac( $http_method, $endpoint );
-        if( 'GET' === $http_method ){
-            $endpoint .= '?'.$params->serialize();
-        }
-        else {
-            //$conf['headers'] = $params->oauth_header();
-            $conf['body'] = $params->serialize();
-        }
-        $http = self::http_request( $endpoint, $conf );
-        $data = json_decode( $http['body'], true );
+        $http = $this->rest_request( $path, $args, $http_method );
+        // Deserialize response
         $status = $http['status'];
+        $data = json_decode( $http['body'], true );
         // unserializable array assumed to be serious error
         if( ! is_array($data) ){
             $err = array( 
@@ -246,16 +236,22 @@ class TwitterApiClient {
         if( isset($cachekey) ){
            apc_store( $cachekey, $data, $this->cache_ttl );
         }
-        // remember current rate limits for this endpoint
-        $this->last_call = $path;
-        if( isset($http['headers']['X-Rate-Limit-Limit']) ) {
-            $this->last_rate[$path] = array (
-                'limit'     => (int) $http['headers']['X-Rate-Limit-Limit'],
-                'remaining' => (int) $http['headers']['X-Rate-Limit-Remaining'],
-                'reset'     => (int) $http['headers']['X-Rate-Limit-Reset'],
-            );
-        }
         return $data;
+    }
+
+
+
+    /**
+     * Call API method over HTTP and return raw response data without caching
+     * @param string API method, e.g. "users/show"
+     * @param array method arguments
+     * @param string http request method
+     * @return array structure from http_request
+     * @throws TwitterApiException
+     */
+    public function raw( $path, array $args = array(), $http_method = 'GET' ){
+        $args = $this->sanitize_args( $args );
+        return $this->rest_request( $path, $args, $http_method );
     }
 
 
@@ -288,11 +284,53 @@ class TwitterApiClient {
         }
         return $params;   
     }
+    
+    
+
+    
+    /**
+     * Sign and execute REST API call
+     * @return array
+     */
+    private function rest_request( $path, array $args, $http_method ){
+        // all calls must be authenticated in API 1.1
+        if( ! $this->has_auth() ){
+            throw new TwitterApiException( 'Twitter client not authenticated', 0, 401 );
+        }
+        // prepare HTTP request config
+        $conf = array (
+            'method' => $http_method,
+        );
+        // build signed URL and request parameters
+        $endpoint = TWITTER_API_BASE.'/'.$path.'.json';
+        $params = new TwitterOAuthParams( $args );
+        $params->set_consumer( $this->Consumer );
+        $params->set_token( $this->AccessToken );
+        $params->sign_hmac( $http_method, $endpoint );
+        if( 'GET' === $http_method ){
+            $endpoint .= '?'.$params->serialize();
+        }
+        else {
+            $conf['body'] = $params->serialize();
+        }
+        $http = self::http_request( $endpoint, $conf );        
+        // remember current rate limits for this endpoint
+        $this->last_call = $path;
+        if( isset($http['headers']['X-Rate-Limit-Limit']) ) {
+            $this->last_rate[$path] = array (
+                'limit'     => (int) $http['headers']['X-Rate-Limit-Limit'],
+                'remaining' => (int) $http['headers']['X-Rate-Limit-Remaining'],
+                'reset'     => (int) $http['headers']['X-Rate-Limit-Reset'],
+            );
+        }
+        return $http;
+    }    
 
 
 
     /**
      * Abstract HTTP call, currently just uses cURL extension
+     * @return array e.g. { body: '', error: '', status: 200, headers: {} }
      */
     public static function http_request( $endpoint, array $conf ){
         $conf += array(
@@ -347,7 +385,6 @@ class TwitterApiClient {
             $error = curl_error( $ch ) or 
             $error = 'No response from Twitter';
         }
-
         return array (
             'body'    => $body,
             'error'   => $error,
