@@ -57,7 +57,7 @@ function proxy_exit( $body, $type, $status = 200, $ttl = 0 ){
     // wrap JSONP callback function as long as response is JSON
     if( ! empty($_REQUEST['callback']) && $isJSON ){
         $type = 'text/javascript; charset=utf-8';
-        $body = $callback.'('.$body.');';
+        $body = $_REQUEST['callback'].'('.$body.');';
     }
     
     // handle HTTP status and expiry header
