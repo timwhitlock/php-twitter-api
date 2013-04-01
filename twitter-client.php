@@ -398,11 +398,37 @@ class TwitterApiClient {
     /**
      * Get current rate limit, if known. does not look it up
      */
-    public function last_rate_limit( $func = '' ){
+    public function last_rate_limit_data( $func = '' ){
         $func or $func = $this->last_call;
         return isset($this->last_rate[$func]) ? $this->last_rate[$func] : array();
     }
-
+    
+    
+    /**
+     * Get rate limit allowance for last endpoint request
+     */
+    public function last_rate_limit_allowance( $func = '' ){
+        $data = $this->last_rate_limit_data($func);
+        return isset($data['limit']) ? $data['limit'] : null;
+    }
+    
+    
+    /**
+     * Get number of requests remaining this period for last endpoint request
+     */
+    public function last_rate_limit_remaining( $func = '' ){
+        $data = $this->last_rate_limit_data($func);
+        return isset($data['remaining']) ? $data['remaining'] : null;
+    }
+    
+    
+    /**
+     * Get rate limit reset time for last endpoint request
+     */
+    public function last_rate_limit_reset( $func = '' ){
+        $data = $this->last_rate_limit_data($func);
+        return isset($data['reset']) ? $data['reset'] : null;
+    }
 
 }
 
