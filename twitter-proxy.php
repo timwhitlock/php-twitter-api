@@ -11,10 +11,6 @@ function proxy_user_request( $path, $ttl = 60 ){
         // default content type in case of failure
         $type = TW_CONTENT_TYPE;
 
-        // Authenticate Twitter client from creds in config.php
-        $Client = new TwitterApiClient;
-        $Client->set_oauth( TW_CONSUMER_KEY, TW_CONSUMER_SEC, TW_ACCESS_KEY, TW_ACCESS_SEC );
-    
         // Twitter API params supported in GET and POST only
         $method = strtoupper( $_SERVER['REQUEST_METHOD'] );
         if( false === strpos(TW_ALLOW_METHODS,$method) ){
@@ -45,13 +41,16 @@ function proxy_user_request( $path, $ttl = 60 ){
         }
 
         if( isset($data) ){
-            header('X-Cache: Flamingo HIT' );
+            header('X-Cache: Proxy HIT' );
             // reduce TTL to life of cached data
             $age = time() - $data['t'];
             $ttl-= $age;
         }
         else {
-            header('X-Cache: Flamingo MISS' );
+            header('X-Cache: Proxy MISS' );
+            // Authenticate Twitter client from creds in config.php
+            $Client = new TwitterApiClient;
+            $Client->set_oauth( TW_CONSUMER_KEY, TW_CONSUMER_SEC, TW_ACCESS_KEY, TW_ACCESS_SEC );
             $data = $Client->raw( $path, $args, $method );
 
             // extend TTL if rate limit has been reached for this request
