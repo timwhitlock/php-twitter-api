@@ -8,9 +8,16 @@
 function proxy_user_request( $path, $ttl = 60 ){
     try {
         
-        // default content type in case of failure
-        $type = TW_CONTENT_TYPE;
-
+        // Check referrer header for JavaScript applications
+        if( TW_MATCH_REFERRER ){
+            if( empty($_SERVER['HTTP_REFERER']) ){
+                proxy_die( 400 , 'Empty referrer' );
+            }
+            if( ! preg_match( TW_MATCH_REFERRER, $_SERVER['HTTP_REFERER'] ) ){
+                proxy_die( 403, 'Illegal referrer' );
+            }
+        }
+        
         // Twitter API params supported in GET and POST only
         $method = strtoupper( $_SERVER['REQUEST_METHOD'] );
         if( false === strpos(TW_ALLOW_METHODS,$method) ){
