@@ -151,7 +151,12 @@ class TwitterApiClient {
      */
     public function get_oauth_access_token( $oauth_verifier ){
         $params = $this->oauth_exchange( TWITTER_OAUTH_ACCESS_TOKEN_URL, compact('oauth_verifier') );
-        return new TwitterOAuthToken( $params['oauth_token'], $params['oauth_token_secret'] );
+        $token = new TwitterOAuthToken( $params['oauth_token'], $params['oauth_token_secret'] );
+        $token->user = array (
+            'id' => $params['user_id'],
+            'screen_name' => $params['screen_name'],
+        );
+        return $token;
     }    
     
     
@@ -276,6 +281,11 @@ class TwitterApiClient {
         $body = trim( $http['body'] );
         $stat = $http['status'];
         if( 200 !== $stat ){
+            // Twitter might respond as XML, but with an HTML content type for some reason
+            if( 0 === strpos($body, '<?') ){
+                $xml = simplexml_load_string($body);
+                $body = (string) $xml->error;
+            }
             throw new TwitterApiException( $body, -1, $stat );
         }
         parse_str( $body, $params );
@@ -446,6 +456,7 @@ class TwitterOAuthToken {
 
     public $key;
     public $secret;
+    public $user;
 
     public function __construct( $key, $secret = '' ){
         if( ! $key ){
