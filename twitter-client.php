@@ -456,6 +456,7 @@ class TwitterOAuthToken {
 
     public $key;
     public $secret;
+    public $verifier;
     public $user;
 
     public function __construct( $key, $secret = '' ){
@@ -464,6 +465,7 @@ class TwitterOAuthToken {
         }
         $this->key = $key;
         $this->secret = $secret;
+        $this->verifier = '';
     }
 
     public function get_authorization_url(){
