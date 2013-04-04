@@ -400,7 +400,7 @@ class TwitterApiClient {
      */
     public function last_rate_limit_data( $func = '' ){
         $func or $func = $this->last_call;
-        return isset($this->last_rate[$func]) ? $this->last_rate[$func] : array();
+        return isset($this->last_rate[$func]) ? $this->last_rate[$func] : array( 'limit' => 0 );
     }
     
     
