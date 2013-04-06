@@ -148,7 +148,7 @@ class TwitterApiClient {
      * @return TwitterApiClient
      */
     public function set_oauth_access( TwitterOAuthToken $token ){
-        $this->Access = $token;
+        $this->AccessToken = $token;
         return $this;
     }
 
