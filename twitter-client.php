@@ -543,7 +543,8 @@ class TwitterOAuthParams {
     
     public function serialize(){
         $str = http_build_query( $this->args );
-        $str = str_replace( '%7E', '~', $str );
+        // PHP_QUERY_RFC3986 requires PHP >= 5.4
+        $str = str_replace( array('+','%7E'), array('%20','~'), $str );
         return $str;
     }
 
