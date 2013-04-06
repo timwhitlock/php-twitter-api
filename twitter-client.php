@@ -129,6 +129,28 @@ class TwitterApiClient {
         }
         return $this;
     }
+    
+
+    /**
+     * Set consumer oauth token by object
+     * @param TwitterOAuthToken
+     * @return TwitterApiClient
+     */
+    public function set_oauth_consumer( TwitterOAuthToken $token ){
+        $this->Consumer = $token;
+        return $this;
+    }
+    
+
+    /**
+     * Set access oauth token by object
+     * @param TwitterOAuthToken
+     * @return TwitterApiClient
+     */
+    public function set_oauth_access( TwitterOAuthToken $token ){
+        $this->Access = $token;
+        return $this;
+    }
 
     
     
