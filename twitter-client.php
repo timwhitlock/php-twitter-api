@@ -1,7 +1,8 @@
 <?php
 /**
  * Simple Twitter API 1.1 REST Client using cURL extension
- * @author Tim Whitlock <@timwhitlock>
+ * @author Tim Whitlock, http://timwhitlock.info
+ * @license MIT
  */
 
 define('TWITTER_API_TIMEOUT', 5 );  
