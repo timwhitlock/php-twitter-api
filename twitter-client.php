@@ -410,19 +410,16 @@ class TwitterApiClient {
                     $headers[ strtolower($match[1]) ] = $match[2];
                 }        
             }
-        }
-        // if body is empty, something has gone very wrong.
-        if( $body ){
-            $error = '';
+            curl_close($ch);
         }
         else {
             $error = curl_error( $ch ) or 
             $error = 'No response from Twitter';
+            is_resource($ch) and curl_close($ch);
+            throw new TwitterApiException( $error );
         }
-        curl_close($ch);
         return array (
             'body'    => $body,
-            'error'   => $error,
             'status'  => $status,
             'headers' => $headers,
         );
