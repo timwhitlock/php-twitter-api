@@ -401,15 +401,16 @@ class TwitterApiClient {
         // execute and parse response
         $response = curl_exec( $ch );
         $status = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
-        curl_close($ch);
         $headers = array();
-        list( $header, $body ) = preg_split('/\r\n\r\n/', $response, 2 ); 
-        if( preg_match_all('/^(Content[\w\-]+|X-Rate[^:]+):\s*(.+)/mi', $header, $r, PREG_SET_ORDER ) ){
-            foreach( $r as $match ){
-                $headers[ strtolower($match[1]) ] = $match[2];
-            }        
+        $body = '';
+        if( $response && $status ){
+            list( $header, $body ) = preg_split('/\r\n\r\n/', $response, 2 ); 
+            if( preg_match_all('/^(Content[\w\-]+|X-Rate[^:]+):\s*(.+)/mi', $header, $r, PREG_SET_ORDER ) ){
+                foreach( $r as $match ){
+                    $headers[ strtolower($match[1]) ] = $match[2];
+                }        
+            }
         }
-        
         // if body is empty, something has gone very wrong.
         if( $body ){
             $error = '';
@@ -418,6 +419,7 @@ class TwitterApiClient {
             $error = curl_error( $ch ) or 
             $error = 'No response from Twitter';
         }
+        curl_close($ch);
         return array (
             'body'    => $body,
             'error'   => $error,
