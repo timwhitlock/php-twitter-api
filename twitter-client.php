@@ -400,6 +400,10 @@ class TwitterApiClient {
         
         // execute and parse response
         $response = curl_exec( $ch );
+        if ( 60 === curl_errno($ch) ) { // CURLE_SSL_CACERT
+            curl_setopt( $ch, CURLOPT_CAINFO, __DIR__.'/ca-chain-bundle.crt');
+            $response = curl_exec($ch);
+        }
         $status = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
         $headers = array();
         $body = '';
