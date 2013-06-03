@@ -494,6 +494,10 @@ class TwitterOAuthToken {
         return TWITTER_OAUTH_AUTHORIZE_URL.'?oauth_token='.rawurlencode($this->key);
     }
 
+    public function get_authentication_url(){
+        return TWITTER_OAUTH_AUTHENTICATE_URL.'?oauth_token='.rawurlencode($this->key);
+    }
+
 }
 
 
