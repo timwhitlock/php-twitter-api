@@ -10,4 +10,4 @@ First retrieve or generate a [consumer key and a consumer secret](https://dev.tw
 
 From the commandline run `php authorize.php` and follow the prompts.
 
-In the end, you will be given an access key and an access secret which you can use with the [twitter api](https://dev.twitter.com/docs/api/1.1). 
+In the end you will be given an access key and an access secret which you can use with the [Twitter API](https://dev.twitter.com/docs/api/1.1). 
