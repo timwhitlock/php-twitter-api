@@ -82,6 +82,6 @@ catch( TwitterApiException $Ex ){
 	exit();
 }
 
-print_r($config);
-
-?>
+echo '<?php
+$config = ', var_export($config),';
+';
